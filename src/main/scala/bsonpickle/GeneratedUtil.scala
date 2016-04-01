@@ -13,8 +13,8 @@ private[bsonpickle] trait GeneratedUtil {
   type Writer[T]
   def makeReader[T](pf: PartialFunction[BSONValue, T]): Reader[T]
   def makeWriter[T](f: T => BSONValue): Writer[T]
-  def readBson[T: Reader](bson: BSONValue): T
-  def writeBson[T: Writer](t: T): BSONValue
+  def read[T: Reader](bson: BSONValue): T
+  def write[T: Writer](t: T): BSONValue
 
   protected[this] def validate[T](name: String)(pf: PartialFunction[BSONValue, T]): PartialFunction[BSONValue, T]
 
@@ -45,7 +45,6 @@ private[bsonpickle] trait GeneratedUtil {
   protected[this] def mapToArray(o: BSONDocument, names: Array[String], defaults: Array[BSONValue]) = {
     val accumulated = new Array[BSONValue](names.length)
     val map = o.stream.flatMap(_.toOption).toMap
-println(map)
     var i = 0
     val l = names.length
     while (i < l) {

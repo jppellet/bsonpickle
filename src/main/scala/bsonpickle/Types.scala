@@ -59,8 +59,8 @@ trait Types{ types =>
 
   def readerWriterVia[A, B](r: B => A, w: A => B)(implicit rB: Reader[B], wB: Writer[B]): Reader[A] with Writer[A] =
     ReadWriter(
-      { case a => writeBson(w(a))(wB) }, //
-      { case bson => r(readBson[B](bson)(rB)) }
+      { case a => write(w(a))(wB) }, //
+      { case bson => r(read[B](bson)(rB)) }
     )
 
   /**
@@ -130,9 +130,9 @@ trait Types{ types =>
   /**
    * Serialize an object of type `T` to a `BSONValue`
    */
-  def writeBson[T: Writer](expr: T): BSONValue = implicitly[Writer[T]].write(expr)
+  def write[T: Writer](expr: T): BSONValue = implicitly[Writer[T]].write(expr)
   /**
    * Deserialize a `BSONValue` object of type `T`
    */
-  def readBson[T: Reader](expr: BSONValue): T = implicitly[Reader[T]].read(expr)
+  def read[T: Reader](expr: BSONValue): T = implicitly[Reader[T]].read(expr)
 }

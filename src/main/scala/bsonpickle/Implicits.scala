@@ -35,8 +35,8 @@ trait Implicits extends Types {
     def makeReader[T](pf: PartialFunction[BSONValue, T]) = imp.Reader(pf)
     def makeWriter[T](f: T => BSONValue) = imp.Writer(f)
     // Have to manually spell out the implicit here otherwise compiler crashes
-    def readBson[T](expr: BSONValue)(implicit ev: Reader[T]): T = imp.readBson(expr)(ev)
-    def writeBson[T](expr: T)(implicit ev: Writer[T]): BSONValue = imp.writeBson(expr)(ev)
+    def read[T](expr: BSONValue)(implicit ev: Reader[T]): T = imp.read(expr)(ev)
+    def write[T](expr: T)(implicit ev: Writer[T]): BSONValue = imp.write(expr)(ev)
 
     def merge0[T: ClassTag, R, U](f: T => R): U => R = {
       case t: T => f(t)
@@ -142,18 +142,18 @@ trait Implicits extends Types {
 
   implicit def SeqishR[V[_], T: R]
   (implicit cbf: CanBuildFrom[Nothing, T, V[T]]): R[V[T]] = R[V[T]](
-    Internal.validate("Array(n)") { case x: BSONArray => x.stream.flatMap(_.toOption.map(readBson[T])).to[V] }
+    Internal.validate("Array(n)") { case x: BSONArray => x.stream.flatMap(_.toOption.map(read[T])).to[V] }
   )
 
   implicit def SeqishW[T: W, V[_] <: Iterable[_]]: W[V[T]] = W[V[T]] {
-    (x: V[T]) => BSONArray(x.iterator.asInstanceOf[Iterator[T]].map(writeBson(_)).toArray)
+    (x: V[T]) => BSONArray(x.iterator.asInstanceOf[Iterator[T]].map(write(_)).toArray)
   }
 
   private[this] def SeqLikeW[T: W, V[_]](g: V[T] => Option[Seq[T]]): W[V[T]] = W[V[T]](
-    x => BSONArray(g(x).get.map(x => writeBson(x)))
+    x => BSONArray(g(x).get.map(x => write(x)))
   )
   private[this] def SeqLikeR[T: R, V[_]](f: Seq[T] => V[T]): R[V[T]] = R[V[T]](
-    Internal.validate("Array(n)") { case x: BSONArray => f(x.stream.flatMap(_.toOption.map(readBson[T]))) }
+    Internal.validate("Array(n)") { case x: BSONArray => f(x.stream.flatMap(_.toOption.map(read[T]))) }
   )
 
   implicit def OptionW[T: W]: W[Option[T]] = SeqLikeW[T, Option](x => Some(x.toSeq))
@@ -168,29 +168,29 @@ trait Implicits extends Types {
 
   implicit def MapW[K: W, V: W]: W[Map[K, V]] =
     if (implicitly[W[K]] == implicitly[W[String]])
-      W[Map[K, V]](x => BSONDocument(x.toSeq.map { case (k, v) => (k.asInstanceOf[String], writeBson[V](v)) }))
+      W[Map[K, V]](x => BSONDocument(x.toSeq.map { case (k, v) => (k.asInstanceOf[String], write[V](v)) }))
     else
-      W[Map[K, V]](x => BSONArray(x.toSeq.map(writeBson[(K, V)])))
+      W[Map[K, V]](x => BSONArray(x.toSeq.map(write[(K, V)])))
 
 
   implicit def MapR[K: R, V: R]: R[Map[K, V]] =
     if (implicitly[R[K]] == implicitly[R[String]])
       R[Map[K, V]](Internal.validate("Object") {
-        case x: BSONDocument => x.stream.flatMap(_.toOption.map { case (k, v) => (k.asInstanceOf[K], readBson[V](v)) }).toMap
+        case x: BSONDocument => x.stream.flatMap(_.toOption.map { case (k, v) => (k.asInstanceOf[K], read[V](v)) }).toMap
       })
     else
       R[Map[K, V]](Internal.validate("Array(n)") {
-        case x: BSONArray => x.stream.flatMap(_.toOption.map(readBson[(K, V)])).toMap
+        case x: BSONArray => x.stream.flatMap(_.toOption.map(read[(K, V)])).toMap
       })
 
   implicit def EitherR[A: R, B: R]: R[Either[A, B]] = R[Either[A, B]](
     RightR[A, B].read orElse LeftR[A, B].read
   )
   implicit def RightR[A, B: R]: R[Right[A, B]] = R[Right[A, B]] {
-    case BSONArraySuccess(BSONBoolean(true), value) => Right(readBson[B](value))
+    case BSONArraySuccess(BSONBoolean(true), value) => Right(read[B](value))
   }
   implicit def LeftR[A: R, B]: R[Left[A, B]] = R[Left[A, B]] {
-	case BSONArraySuccess(BSONBoolean(false), value) => Left(readBson[A](value))
+	case BSONArraySuccess(BSONBoolean(false), value) => Left(read[A](value))
   }
 
   implicit def RightW[A, B: W]: W[Right[A, B]] = {
@@ -204,14 +204,14 @@ trait Implicits extends Types {
   }
 
   implicit def EitherW[A: W, B: W]: W[Either[A, B]] = W[Either[A, B]] {
-    case Left(t) => BSONArray(BSONBoolean(false), writeBson(t))
-    case Right(t) => BSONArray(BSONBoolean(true), writeBson(t))
+    case Left(t) => BSONArray(BSONBoolean(false), write(t))
+    case Right(t) => BSONArray(BSONBoolean(true), write(t))
   }
   implicit val DurationW: W[Duration] = W[Duration] {
-    case Duration.Inf => writeBson("inf")
-    case Duration.MinusInf => writeBson("-inf")
-    case x if x eq Duration.Undefined => writeBson("undef")
-    case x => writeBson(x.toNanos)
+    case Duration.Inf => write("inf")
+    case Duration.MinusInf => write("-inf")
+    case x if x eq Duration.Undefined => write("undef")
+    case x => write(x.toNanos)
   }
 
   implicit val InfiniteW = W[Duration.Infinite](DurationW.write)

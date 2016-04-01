@@ -45,12 +45,12 @@ val bsonpickle = (project in file("."))
         val writerTypes = commaSeparated(j => s"T$j: Writer")
         val readerTypes = commaSeparated(j => s"T$j: Reader")
         val typeTuple = commaSeparated(j => s"T$j")
-        val written = commaSeparated(j => s"writeBson(x._$j)")
+        val written = commaSeparated(j => s"write(x._$j)")
         val pattern = commaSeparated(j => s"x$j")
-        val read = commaSeparated(j => s"readBson[T$j](x$j)")
+        val read = commaSeparated(j => s"read[T$j](x$j)")
         val caseReader =
-          if(i == 1) s"f(readBson[Tuple1[T1]](x)._1)"
-          else s"f.tupled(readBson[Tuple$i[$typeTuple]](x))"
+          if(i == 1) s"f(read[Tuple1[T1]](x)._1)"
+          else s"f.tupled(read[Tuple$i[$typeTuple]](x))"
         (s"""
           implicit def Tuple${i}W[$writerTypes] = makeWriter[Tuple${i}[$typeTuple]](
             x => BSONArray($written)
@@ -64,7 +64,7 @@ val bsonpickle = (project in file("."))
             = RCase[V](names, defaults, {case x => $caseReader})
           def Case${i}W[$writerTypes, V]
                        (g: V => Option[Tuple${i}[$typeTuple]], names: Array[String], defaults: Array[BSONValue])
-            = WCase[V](names, defaults, x => writeBson(g(x).get))
+            = WCase[V](names, defaults, x => write(g(x).get))
           """)
       }
       val (tuples, cases) = tuplesAndCases.unzip
