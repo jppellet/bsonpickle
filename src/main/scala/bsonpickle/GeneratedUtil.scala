@@ -16,6 +16,10 @@ private[bsonpickle] trait GeneratedUtil {
   def read[T: Reader](bson: BSONValue): T
   def write[T: Writer](t: T): BSONValue
 
+  // This is needed to ensure compatibility with `derive` when expanding default values
+  // See https://github.com/lihaoyi/upickle-pprint/issues/143
+  def writeJs[T: Writer](t: T): BSONValue = write(t)
+
   protected[this] def validate[T](name: String)(pf: PartialFunction[BSONValue, T]): PartialFunction[BSONValue, T]
 
   protected[this] def readerCaseFunction[T](names: Array[String],
