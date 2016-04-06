@@ -59,13 +59,14 @@ Here's how native Scala types are mapped to BSON classes from the ReactiveMongo 
 | `Option` | `BSONArray` with 0 or 1 elements |
 | `Either` | `BSONArray` with 2 elements, the first of which it a `BSONBoolean` indicating `Left` or `Right`
 | Unit, other singletons | empty `BSONDocument` |
-| Case classes<sup>1</sup> | `BSONDocument` |
-| Sealed trait hiearchies<sup>1, 3</sup> | `BSONDocument` |
+| Case classes<sup>1, 3</sup> | `BSONDocument` |
+| Sealed trait hiearchies<sup>1, 4</sup> | `BSONDocument` |
 
 **Notes**
  1. Provided the values it contains can themselves be represented as BSON.
  2. “Collection” here means any generic type `V` containing elements of type `T` for which a `CanBuildFrom[Nothing, T, V[T]]` is implicitly available.
- 3. Concrete type information is stored in a field named `"_type"` (and not `"$type"` as µPickle does, as MongoDB disallows the use of the dollar character in field names). This is customizable.
+ 3. If you’ve defined custom field names with the `derive.key` annotation, they will be picked up by both µPickle and bsonpickle.
+ 4. Concrete type information is stored in a field named `"_type"` (and not `"$type"` as µPickle does, as MongoDB disallows the use of the dollar character in field names). This is customizable.
 
 ### Versioning Scheme
 
