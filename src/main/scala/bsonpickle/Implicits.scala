@@ -136,7 +136,7 @@ trait Implicits extends Types {
     { case BSONLong(value) => value }
   )
   implicit val FloatRW = doubleReadWriter(_.toFloat, _.toFloat)
-  implicit val DoubleRW = doubleReadWriter(_.toDouble, _.toDouble)
+  implicit val DoubleRW = doubleReadWriter(identity, _.toDouble)
 
   import collection.generic.CanBuildFrom
 

@@ -124,7 +124,7 @@ trait BsonPrint {
       case doc: BSONDocument =>
         val elems: Seq[String] = doc.stream.map(e => bsonFieldToString(e, indent + 1))
         if (elems.isEmpty) "{}"
-        else s"{\n${ elems.mkString("\n") }\n${ indentation(indent) }}"
+        else s"{\n${ elems.mkString(",\n") }\n${ indentation(indent) }}"
       case arr: BSONArray =>
         val elems: Seq[String] = arr.stream.map(e => bsonValueTryToString(e, indent))
         if (elems.isEmpty) "[]"
