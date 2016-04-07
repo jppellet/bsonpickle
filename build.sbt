@@ -1,15 +1,15 @@
 // Versions
 
-val referenceUpickleAndDeriveVersion = "0.3.9"
 val reactiveMongoVersion = "0.11.10"
-val bsonPickleMinor = "0-SNAPSHOT"
+val referenceUpickleAndDeriveVersion = "0.3.9"
+val bsonPickleMinor = "1"
 
 val bsonPickleVersion = s"$referenceUpickleAndDeriveVersion.$bsonPickleMinor"
 
 
 val bsonpickle = (project in file("."))
   .settings(
-  	organization := "name.pellet",
+  	organization := "name.pellet.jp",
     name := "bsonpickle",
 	version := bsonPickleVersion,
 	scalaVersion := "2.11.7",
@@ -20,6 +20,7 @@ val bsonpickle = (project in file("."))
 	  "-encoding", "utf8",
 	  "-feature"
 	),
+	
 //	testFrameworks += new TestFramework("utest.runner.Framework"),
 	libraryDependencies ++= Seq(
 //	  "com.lihaoyi" %% "utest" % "0.3.1" % "test",
@@ -35,8 +36,8 @@ val bsonpickle = (project in file("."))
 	  )
 	),
 	unmanagedSourceDirectories in Compile ++= {
-	  if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / ".."/"shared"/"src"/ "main" / "scala-2.10")
-	  else Seq(baseDirectory.value / ".."/"shared" / "src"/"main" / "scala-2.11")
+	  if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / ".." / "shared" / "src" / "main" / "scala-2.10")
+	  else Seq(baseDirectory.value / ".." / "shared" / "src" / "main" / "scala-2.11")
 	},
     sourceGenerators in Compile <+= sourceManaged in Compile map { dir =>
       val file = dir / "bsonpickle" / "Generated.scala"
@@ -83,11 +84,45 @@ val bsonpickle = (project in file("."))
       Seq(file)
     },
 
+	// console
 	initialCommands in console := """
 	  import bsonpickle.default._
 	  import reactivemongo.bson._
 	""",
-	triggeredMessage := Watched.clearWhenTriggered
+	triggeredMessage := Watched.clearWhenTriggered,
+	
+	// Sonatype
+	publishMavenStyle := true,
+    publishTo := {
+	  val sonatype = "https://oss.sonatype.org/"
+	  if (isSnapshot.value)
+	    Some("snapshots" at sonatype + "content/repositories/snapshots")
+	  else
+	    Some("releases"  at sonatype + "service/local/staging/deploy/maven2")
+	},
+	publishArtifact in Test := false,
+	pomIncludeRepository := { _ => false },
+	pomExtra := (
+	  <url>https://github.com/jppellet/bsonpickle</url>
+	  <licenses>
+	    <license>
+          <name>MIT license</name>
+          <url>http://www.opensource.org/licenses/mit-license.php</url>
+	    </license>
+	  </licenses>
+	  <scm>
+	    <url>git@github.com:jppellet/bsonpickle.git</url>
+	    <connection>scm:git:git@github.com:jppellet/bsonpickle.git</connection>
+	  </scm>
+	  <developers>
+	    <developer>
+	      <id>jppellet</id>
+	      <name>Jean-Philippe Pellet</name>
+	      <url>http://jp.pellet.name</url>
+	    </developer>
+	  </developers>
+	)
+	
   )
 
 onLoad in Global := (Command.process("project bsonpickle", _: State)) compose (onLoad in Global).value

@@ -1,6 +1,6 @@
 # bsonpickle
 
-[![Join the chat at https://gitter.im/jppellet/bsonpickle](https://badges.gitter.im/jppellet/bsonpickle.svg)](https://gitter.im/jppellet/bsonpickle?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/name.pellet.jp/bsonpickle/badge.svg?style=flat)](http://mvnrepository.com/artifact/name.pellet.jp/bsonpickle) [![Join the chat at https://gitter.im/jppellet/bsonpickle](https://badges.gitter.im/jppellet/bsonpickle.svg)](https://gitter.im/jppellet/bsonpickle?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **bsonpickle** is a modified version of [µPickle](http://www.lihaoyi.com/upickle-pprint/upickle/) which implicitly derives `Reader` and `Writer` instances for common Scala data structures (`Option`, `Either`, most collection classes), case classes and sealed trait hierarchies to serialize data to BSON for use with the [ReactiveMongo](http://reactivemongo.org) driver.
 
@@ -12,9 +12,7 @@ Big thanks to [Li Haoyi](https://github.com/lihaoyi) for creating µPickle!
 
 Add this to `build.sbt`:
 
-`libraryDependencies += "name.pellet" %% "bsonpickle" % <latest published version>`
-
-For now, no version has been published, so you'll have to clone this repo, run `sbt publishLocal`, and insert the version number that shows up in the cloned repo's `build.sbt` file.
+`libraryDependencies += "name.pellet.jp" %% "bsonpickle" % <latest published version>`
 
 ## Why serialize to BSON directly?
 
