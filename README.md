@@ -1,6 +1,6 @@
 # bsonpickle
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/name.pellet.jp/bsonpickle/badge.svg?style=flat)](http://mvnrepository.com/artifact/name.pellet.jp/bsonpickle) [![Join the chat at https://gitter.im/jppellet/bsonpickle](https://badges.gitter.im/jppellet/bsonpickle.svg)](https://gitter.im/jppellet/bsonpickle?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/name.pellet.jp/bsonpickle_2.11/badge.svg?style=flat)](http://mvnrepository.com/artifact/name.pellet.jp/bsonpickle_2.11) [![Join the chat at https://gitter.im/jppellet/bsonpickle](https://badges.gitter.im/jppellet/bsonpickle.svg)](https://gitter.im/jppellet/bsonpickle?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **bsonpickle** is a modified version of [µPickle](http://www.lihaoyi.com/upickle-pprint/upickle/) which implicitly derives `Reader` and `Writer` instances for common Scala data structures (`Option`, `Either`, most collection classes), case classes and sealed trait hierarchies to serialize data to BSON for use with the [ReactiveMongo](http://reactivemongo.org) driver.
 
