@@ -48,7 +48,7 @@ private[bsonpickle] trait GeneratedUtil {
 
   protected[this] def mapToArray(o: BSONDocument, names: Array[String], defaults: Array[BSONValue]) = {
     val accumulated = new Array[BSONValue](names.length)
-    val map = o.stream.flatMap(_.toOption).toMap
+    val map = o.stream.flatMap(_.toOption).map { case BSONElement(n, v) => (n, v) }.toMap
     var i = 0
     val l = names.length
     while (i < l) {

@@ -49,9 +49,12 @@ trait Types{ types =>
    * [[Reader]] and [[Writer]] at the same time.
    */
   object ReadWriter {
-    def apply[T](_write: T => BSONValue, _read: PF[BSONValue, T]): Writer[T] with Reader[T] = new Writer[T] with Reader[T]{
-      def read0 = _read
-      def write0 = _write
+    def apply[T](_write: T => BSONValue, _read: PF[BSONValue, T])
+                (implicit src: sourcecode.Enclosing)
+                : Writer[T] with Reader[T] = new Writer[T] with Reader[T]{
+      val read0 = _read
+      val write0 = _write
+      override def toString = src.value
     }
   }
 
@@ -72,7 +75,7 @@ trait Types{ types =>
   )
   trait Writer[T]{
     def write0: T => BSONValue
-    final def write: T => BSONValue = {
+    final val write: T => BSONValue = {
       case null => BSONNull
       case t => write0(t)
     }
@@ -83,8 +86,10 @@ trait Types{ types =>
      * Helper class to make it convenient to create instances of [[Writer]]
      * from the equivalent function
      */
-    def apply[T](_write: T => BSONValue): Writer[T] = new Writer[T]{
+    def apply[T](_write: T => BSONValue)
+                (implicit src: sourcecode.Enclosing): Writer[T] = new Writer[T]{
       val write0 = _write
+      override def toString = src.value
     }
 
   }
@@ -98,17 +103,33 @@ trait Types{ types =>
   trait Reader[T]{
     def read0: PF[BSONValue, T]
 
-    final def read : PF[BSONValue, T] = ({
+    private val readNull: PF[BSONValue, T] = {
       case BSONNull => null.asInstanceOf[T]
-    }: PF[BSONValue, T]) orElse read0
+    }
+
+    final val read : PF[BSONValue, T] = new PartialFunction[BSONValue, T] {
+	      def isDefinedAt(x: BSONValue) = x == BSONNull || read0.isDefinedAt(x)
+
+	      /**
+	        * Do this `isDefinedAt` dance to make sure we throw the correct error
+	        * message (that of `read0` instead of `readNull` in the case where someone
+	        * calls `read.apply` on some invalid value
+	        */
+	      def apply(v1: BSONValue): T =
+	        if (!this.isDefinedAt(v1)) read0(v1)
+	        else read0.applyOrElse(v1, readNull)
+	  }
   }
+
   object Reader{
     /**
      * Helper class to make it convenient to create instances of [[Reader]]
      * from the equivalent function
      */
-    def apply[T](_read: PF[BSONValue, T]): Reader[T] = new Reader[T]{
-      def read0 = _read
+    def apply[T](_read: PF[BSONValue, T])
+                (implicit src: sourcecode.Enclosing): Reader[T] = new Reader[T]{
+      val read0 = _read
+      override def toString = src.value
     }
   }
 

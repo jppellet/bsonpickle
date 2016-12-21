@@ -1,18 +1,25 @@
 // Versions
 
-val reactiveMongoVersion = "0.11.10"
-val referenceUpickleAndDeriveVersion = "0.3.9"
+val reactiveMongoVersion = "0.12.0"
+val referenceUpickleAndDeriveVersion = "0.4.4"
 val bsonPickleMinor = "1"
 
 val bsonPickleVersion = s"$referenceUpickleAndDeriveVersion.$bsonPickleMinor"
 
+val compatible211and212 = 
+  unmanagedSourceDirectories in Compile ++= {
+    if (Set("2.11", "2.12").contains(scalaBinaryVersion.value)) 
+      Seq(sourceDirectory.value / "main" / "scala-2.11_2.12")
+    else
+      Seq()
+  }
 
 val bsonpickle = (project in file("."))
   .settings(
   	organization := "name.pellet.jp",
     name := "bsonpickle",
 	version := bsonPickleVersion,
-	scalaVersion := "2.11.7",
+	scalaVersion := "2.11.8",
     
 	scalacOptions := Seq(
 	  "-unchecked",
@@ -29,17 +36,16 @@ val bsonpickle = (project in file("."))
 	  "com.lihaoyi" %% "derive" % referenceUpickleAndDeriveVersion,
 	  "org.reactivemongo" %% "reactivemongo" % reactiveMongoVersion
 	) ++ (
-	  if (scalaVersion.value startsWith "2.11.") Nil
-	  else Seq(
-	    "org.scalamacros" %% s"quasiquotes" % "2.0.0" % "provided",
-	    compilerPlugin("org.scalamacros" % s"paradise" % "2.1.0-M5" cross CrossVersion.full)
-	  )
+	  if(scalaBinaryVersion.value == "2.10")
+	    Seq(
+	      compilerPlugin("org.scalamacros" % s"paradise" % "2.1.0" cross CrossVersion.full),
+	      "org.scalamacros" %% s"quasiquotes" % "2.1.0"
+	    )
+	  else Seq()
 	),
-	unmanagedSourceDirectories in Compile ++= {
-	  if (scalaVersion.value startsWith "2.10.") Seq(baseDirectory.value / ".." / "shared" / "src" / "main" / "scala-2.10")
-	  else Seq(baseDirectory.value / ".." / "shared" / "src" / "main" / "scala-2.11")
-	},
-    sourceGenerators in Compile <+= sourceManaged in Compile map { dir =>
+	compatible211and212,
+    sourceGenerators in Compile += Def.task{
+      val dir = (sourceManaged in Compile).value
       val file = dir / "bsonpickle" / "Generated.scala"
       val tuplesAndCases = (1 to 22).map{ i =>
         def commaSeparated(s: Int => String) = (1 to i).map(s).mkString(", ")
@@ -82,7 +88,7 @@ val bsonpickle = (project in file("."))
           }
         """)
       Seq(file)
-    },
+    }.taskValue,
 
 	// console
 	initialCommands in console := """

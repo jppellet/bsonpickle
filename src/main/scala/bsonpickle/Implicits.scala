@@ -14,7 +14,7 @@ import reactivemongo.bson._
   * Typeclasses to allow read/writing of all the common
   * data-types and data-structures in the standard library
   */
-trait Implicits extends Types {
+trait Implicits extends Types with BigDecimalSupport {
   imp: Generated =>
 
   import Aliases._
@@ -24,6 +24,33 @@ trait Implicits extends Types {
   implicit def Tuple2R[T1: R, T2: R]: R[(T1, T2)]
   implicit def Tuple2W[T1: W, T2: W]: W[(T1, T2)]
 
+
+  implicit class MergeRW[T: ClassTag](a: ReadWriter[T]){
+    def merge[V <: R: ClassTag, R >: T](b: ReadWriter[V]): ReadWriter[R] = {
+      ReadWriter[R](
+        {
+          case r: V => b.write(r)
+          case r: T => a.write(r)
+        },
+        b.read.orElse[BSONValue, R](a.read)
+      )
+    }
+  }
+  implicit class MergeR[T: ClassTag](a: Reader[T]){
+    def merge[V <: R: ClassTag, R >: T](b: Reader[V]): Reader[R] = {
+      Reader[R](b.read.orElse[BSONValue, R](a.read))
+    }
+  }
+
+  implicit class MergeW[T: ClassTag](a: Writer[T]){
+    def merge[V <: R: ClassTag, R >: T](b: Writer[V]): Writer[R] = {
+      Writer[R]{
+        case r: V => b.write(r)
+        case r: T => a.write(r)
+      }
+
+    }
+  }
 
   /**
     * APIs that need to be exposed to the outside world to support Macros
@@ -47,13 +74,22 @@ trait Implicits extends Types {
       case t: T => f(t)
     }
 
+
+
     def validate[T](name: String)(pf: PartialFunction[BSONValue, T]) = new PartialFunction[BSONValue, T] {
       def isDefinedAt(x: BSONValue) = pf.isDefinedAt(x)
 
       def apply(v1: BSONValue): T = pf.applyOrElse(v1, (x: BSONValue) => throw Invalid.Data(x, name))
+      override def toString = s"validate($name, $pf)"
     }
-    def validateReader[T](name: String)(r: => Reader[T]): Reader[T] = new Reader[T] {
+    def validateReader[T](name: String)(r: => Reader[T]): Reader[T] = new Reader[T]{
+      override val read0 = validate(name)(r.read)
+      override def toString = s"validateReader($name, $r)"
+    }
+    def validateReaderWithWriter[T](name: String)(r: => Reader[T], w: => Writer[T]) = new Reader[T] with Writer[T] {
       override def read0 = validate(name)(r.read)
+      override def write0 = w.write
+      override def toString = s"validateReaderWithWriter($name, $r, $w)"
     }
   }
 
@@ -137,6 +173,8 @@ trait Implicits extends Types {
   )
   implicit val FloatRW = doubleReadWriter(_.toFloat, _.toFloat)
   implicit val DoubleRW = doubleReadWriter(identity, _.toDouble)
+  implicit val BigIntRW = NumericStringReadWriter[BigInt](BigInt(_))
+  implicit val BigDecimalRW = NumericStringReadWriter[BigDecimal](exactBigDecimal)
 
   import collection.generic.CanBuildFrom
 
@@ -168,7 +206,7 @@ trait Implicits extends Types {
 
   implicit def MapW[K: W, V: W]: W[Map[K, V]] =
     if (implicitly[W[K]] == implicitly[W[String]])
-      W[Map[K, V]](x => BSONDocument(x.toSeq.map { case (k, v) => (k.asInstanceOf[String], write[V](v)) }))
+      W[Map[K, V]](x => BSONDocument(x.toSeq.map { case (k, v) => BSONElement(k.asInstanceOf[String], write[V](v)) }))
     else
       W[Map[K, V]](x => BSONArray(x.toSeq.map(write[(K, V)])))
 
@@ -176,7 +214,7 @@ trait Implicits extends Types {
   implicit def MapR[K: R, V: R]: R[Map[K, V]] =
     if (implicitly[R[K]] == implicitly[R[String]])
       R[Map[K, V]](Internal.validate("Object") {
-        case x: BSONDocument => x.stream.flatMap(_.toOption.map { case (k, v) => (k.asInstanceOf[K], read[V](v)) }).toMap
+        case x: BSONDocument => x.stream.flatMap(_.toOption.map { case BSONElement(k, v) => (k.asInstanceOf[K], read[V](v)) }).toMap
       })
     else
       R[Map[K, V]](Internal.validate("Array(n)") {

@@ -37,14 +37,14 @@ trait AttributeTagged extends Api {
   def annotate[V: ClassTag](rw: Reader[V], n: String) = Reader[V] {
     case doc: BSONDocument if doc.get(tagName).contains(BSONString(n)) =>
       rw.read(BSONDocument(doc.stream.filter {
-	    case Success((someTagName, _)) if someTagName == tagName => false
+	    case Success(BSONElement(someTagName, _)) if someTagName == tagName => false
 	    case _ => true
 	  }))
 
   }
 
   def annotate[V: ClassTag](rw: Writer[V], n: String) = Writer[V] { case x: V =>
-    BSONDocument(Success((tagName, BSONString(n))) #:: rw.write(x).asInstanceOf[BSONDocument].stream)
+    BSONDocument(Success(BSONElement(tagName, BSONString(n))) #:: rw.write(x).asInstanceOf[BSONDocument].stream)
   }
 }
 
@@ -60,7 +60,7 @@ trait CompactAttributeTagged extends AttributeTagged {
       rw.read(BSONDocument.empty)
     case doc: BSONDocument if doc.get(tagName).contains(BSONString(n)) =>
       rw.read(BSONDocument(doc.stream.filter {
-	    case Success((someTagName, _)) if someTagName == tagName => false
+	    case Success(BSONElement(someTagName, _)) if someTagName == tagName => false
 	    case _ => true
 	  }))
   }
@@ -71,7 +71,7 @@ trait CompactAttributeTagged extends AttributeTagged {
       if (otherMembers.isEmpty)
         BSONString(n)
       else
-        BSONDocument(Success((tagName, BSONString(n))) #:: otherMembers)
+        BSONDocument(Success(BSONElement(tagName, BSONString(n))) #:: otherMembers)
   }
 
 }
@@ -103,13 +103,21 @@ object Forwarder {
     dieIfNothing[T](c)("Writer")
     c.Expr[T](q"${ c.prefix }.macroW0[$e, ${ c.prefix }.Writer]")
   }
+  def applyRW[T](c: derive.ScalaVersionStubs.Context)
+                (implicit e: c.WeakTypeTag[T]): c.Expr[T] = {
+    import c.universe._
+    dieIfNothing[T](c)("ReadWriter")
+    c.Expr[T](q"${c.prefix}.macroRW0[$e, ${c.prefix}.Reader, ${c.prefix}.Writer]")
+  }
 }
 trait LowPriX {
   this: Api =>
   implicit def macroR[T]: Reader[T] = macro Forwarder.applyR[T]
   implicit def macroW[T]: Writer[T] = macro Forwarder.applyW[T]
+  def macroRW[T]: ReadWriter[T] = macro Forwarder.applyRW[T]
   def macroR0[T, M[_]]: Reader[T] = macro Macros.macroRImpl[T, M]
   def macroW0[T, M[_]]: Writer[T] = macro Macros.macroWImpl[T, M]
+  def macroRW0[T, RM[_], WM[_]]: ReadWriter[T] = macro Macros.macroRWImpl[T, RM, WM]
 }
 
 trait BsonPrint {
@@ -139,11 +147,11 @@ trait BsonPrint {
     }
   }
 
-  def bsonFieldToString(valueTry: Try[(String, BSONValue)], indent: Int = 0): String = {
+  def bsonFieldToString(valueTry: Try[BSONElement], indent: Int = 0): String = {
     valueTry match {
       case Failure(e) =>
         s"${ indentation(indent) }ERROR[${ e.getMessage }]"
-      case Success((name, value)) =>
+      case Success(BSONElement(name, value)) =>
         s"${ indentation(indent) }${ name }: ${ bsonToString(value, indent) }"
     }
   }
