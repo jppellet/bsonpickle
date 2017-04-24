@@ -14,7 +14,7 @@ Add this to `build.sbt`:
 
 `libraryDependencies += "name.pellet.jp" %% "bsonpickle" % <latest published version>`
 	
-Release 0.4.4.1 is based on µPickle 0.4.4 and on the BSON classes found in ReactiveMongo 0.12.
+Release 0.4.4.2 is based on µPickle 0.4.4 and on the BSON classes found in ReactiveMongo 0.12.2.
 
 ## Why serialize to BSON directly?
 

@@ -1,8 +1,9 @@
 // Versions
 
-val reactiveMongoVersion = "0.12.0"
+val reactiveMongoVersion = "0.12.2"
 val referenceUpickleAndDeriveVersion = "0.4.4"
-val bsonPickleMinor = "1"
+val myScalaVersion = "2.11.11"
+val bsonPickleMinor = "2"
 
 val bsonPickleVersion = s"$referenceUpickleAndDeriveVersion.$bsonPickleMinor"
 
@@ -19,7 +20,7 @@ val bsonpickle = (project in file("."))
   	organization := "name.pellet.jp",
     name := "bsonpickle",
 	version := bsonPickleVersion,
-	scalaVersion := "2.11.8",
+	scalaVersion := myScalaVersion,
     
 	scalacOptions := Seq(
 	  "-unchecked",
