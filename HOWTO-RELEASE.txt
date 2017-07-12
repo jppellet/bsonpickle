@@ -1,0 +1,5 @@
+sbt prompt:
+
+publishLocal
+publishSigned (uses ~/.gnupg/* files)
+sonatypeReleaseAll

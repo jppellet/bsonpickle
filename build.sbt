@@ -1,8 +1,8 @@
 // Versions
 
-val reactiveMongoVersion = "0.12.2"
+val reactiveMongoVersion = "0.12.5"
 val referenceUpickleAndDeriveVersion = "0.4.4"
-val myScalaVersion = "2.11.11"
+val myScalaVersion = "2.12.2"
 val bsonPickleMinor = "2"
 
 val bsonPickleVersion = s"$referenceUpickleAndDeriveVersion.$bsonPickleMinor"
