@@ -37,9 +37,9 @@ trait AttributeTagged extends Api {
   def annotate[V: ClassTag](rw: Reader[V], n: String) = Reader[V] {
     case doc: BSONDocument if doc.get(tagName).contains(BSONString(n)) =>
       rw.read(BSONDocument(doc.stream.filter {
-	    case Success(BSONElement(someTagName, _)) if someTagName == tagName => false
-	    case _ => true
-	  }))
+        case Success(BSONElement(someTagName, _)) if someTagName == tagName => false
+        case _ => true
+      }))
 
   }
 
@@ -60,9 +60,9 @@ trait CompactAttributeTagged extends AttributeTagged {
       rw.read(BSONDocument.empty)
     case doc: BSONDocument if doc.get(tagName).contains(BSONString(n)) =>
       rw.read(BSONDocument(doc.stream.filter {
-	    case Success(BSONElement(someTagName, _)) if someTagName == tagName => false
-	    case _ => true
-	  }))
+        case Success(BSONElement(someTagName, _)) if someTagName == tagName => false
+        case _ => true
+      }))
   }
 
   override def annotate[V: ClassTag](rw: Writer[V], n: String) = Writer[V] {
@@ -127,47 +127,69 @@ trait BsonPrint {
 
   private def indentation(indent: Int) = "  " * indent
 
-  def bsonToString(value: BSONValue, indent: Int = 0): String = {
+  def bsonToString(value: BSONValue, indent: Int = 0, withOneLiners: Boolean = false, arrayLimit: Option[Int] = None, alignObjectValues: Boolean = false): String = {
     value match {
       case doc: BSONDocument =>
-        val elems: Seq[String] = doc.stream.map(e => bsonFieldToString(e, indent + 1))
+        val elems: Seq[(String, String)] = doc.stream.map(e => bsonFieldToString(e, indent + 1, withOneLiners, arrayLimit, alignObjectValues))
         if (elems.isEmpty) "{}"
-        else s"{\n${ elems.mkString(",\n") }\n${ indentation(indent) }}"
+        else {
+          if (withOneLiners && elems.size == 1) s"{${ (elems.head._1 + elems.head._2).trim }}"
+          else {
+            val lines =
+              if (!alignObjectValues) elems.map { case (n, v) => n + v }
+              else {
+                val maxFieldWidth = elems.map(_._1.size).max
+                elems.map { case (n, v) => n.padTo(maxFieldWidth, ' ') + v }
+              }
+            s"{\n${ lines.mkString(",\n") }\n${ indentation(indent) }}"
+          }
+        }
       case arr: BSONArray =>
-        val elems: Seq[String] = arr.stream.map(e => bsonValueTryToString(e, indent))
+        val arrayElemsAsSeq = arr.stream.toSeq
+        val (limit, source) = arrayLimit.map(limit => limit -> arrayElemsAsSeq.take(limit + 1)).getOrElse(-1 -> arrayElemsAsSeq)
+        val elems: Seq[String] = source.zipWithIndex.map { case (e, i) =>
+          if (i == limit) s"(${ arrayElemsAsSeq.size - limit } more)"
+          else bsonValueTryToString(e, indent, withOneLiners, arrayLimit, alignObjectValues)
+        }
         if (elems.isEmpty) "[]"
         else elems.mkString("[", ", ", "]")
+      case id: BSONObjectID => id.stringify
       case BSONString(value) => "\"" + value + "\""
-      case BSONInteger(value) => s"$value (Int)"
-      case BSONLong(value) => s"$value (Long)"
-      case BSONDouble(value) => s"$value (Double)"
+      case BSONInteger(value) => s"$value"
+      case BSONLong(value) => s"${ value }L"
+      case BSONDouble(value) => s"$value"
       case BSONBoolean(value) => value.toString
       case BSONDateTime(value) => java.time.Instant.ofEpochMilli(value).toString
       case other => other.toString
     }
   }
 
-  def bsonFieldToString(valueTry: Try[BSONElement], indent: Int = 0): String = {
+  def bsonFieldToString(valueTry: Try[BSONElement], indent: Int = 0, withOneLiners: Boolean = false, arrayLimit: Option[Int] = None, alignObjectValues: Boolean = false): (String, String) = {
     valueTry match {
       case Failure(e) =>
-        s"${ indentation(indent) }ERROR[${ e.getMessage }]"
+        ("", s"${ indentation(indent) }ERROR[${ e.getMessage }]")
       case Success(BSONElement(name, value)) =>
-        s"${ indentation(indent) }${ name }: ${ bsonToString(value, indent) }"
+        val indentedName = s"${ indentation(indent) }${ name }: "
+        val valueStr = bsonToString(value, indent, withOneLiners, arrayLimit, alignObjectValues)
+        (indentedName, valueStr)
     }
   }
 
-  def bsonValueTryToString(valueTry: Try[BSONValue], indent: Int = 0): String = {
+  def bsonValueTryToString(valueTry: Try[BSONValue], indent: Int = 0, withOneLiners: Boolean = false, arrayLimit: Option[Int] = None, alignObjectValues: Boolean = false): String = {
     valueTry match {
       case Failure(e) =>
         val indentation = "  " * indent
         s"${ indentation }ERROR[${ e.getMessage }]"
       case Success(value) =>
-        bsonToString(value, indent)
+        bsonToString(value, indent, withOneLiners, arrayLimit, alignObjectValues)
     }
   }
 
   implicit class BSONValueExt[B <: BSONValue](private val value: B) {
-	def show: B = { println(bsonToString(value)); value }
+    def show: B = {
+      println(bsonToString(value));
+      value
+    }
   }
 
 }
